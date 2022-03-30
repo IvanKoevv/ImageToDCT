@@ -2,15 +2,8 @@ package imgcompressor.algorithms;
 
 
 public final class FastDct8 {
-	
-	/**
-	 * Computes the scaled DCT type II on the specified length-8 array in place.
-	 * <p>The inverse of this function is {@link #inverseTransform}, except for rounding errors.</p>
-	 * @param vector the vector of numbers to transform
-	 * @throws NullPointerException if the array is {@code null}
-	 */
+
 	public static double[] transform(double[] vector) {
-		// Algorithm by Arai, Agui, Nakajima, 1988. For details, see:
 		double[] result = vector.clone();
 		final double v0, v1, v2, v3, v4, v5, v6, v7, v8, v9,
 			v10, v11, v12, v13, v14, v15, v16, v17, v18, v19,
@@ -63,12 +56,6 @@ public final class FastDct8 {
 	}
 	
 	
-	/**
-	 * Computes the scaled DCT type III on the specified length-8 array in place.
-	 * <p>The inverse of this function is {@link #transform}, except for rounding errors.</p>
-	 * @param vector the vector of numbers to transform
-	 * @throws NullPointerException if the array is {@code null}
-	 */
 	public static double[] inverseTransform(double[] vector) {
 		double[] result = vector.clone();
 		final double v0, v1, v2, v3, v4, v5, v6, v7, v8, v9,
@@ -134,7 +121,7 @@ public final class FastDct8 {
 			S[i] = 1 / (4 * C[i]);
 		}
 		S[0] = 1 / (2 * Math.sqrt(2));
-		// A[0] is unused
+		
 		A[1] = C[4];
 		A[2] = C[2] - C[6];
 		A[3] = C[4];

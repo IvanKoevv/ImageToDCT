@@ -3,7 +3,7 @@ package imgcompressor.utils;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 public class ColorController {
-    public static short[][] GetRedArray(int[][] src) {
+    public static short[][] getRedRGBArray(int[][] src) {
         short[][] result = new short[src.length][src.length];
         for (int i = 0; i < src.length; i++) {
             for (int j = 0; j < src.length; j++) {
@@ -14,7 +14,7 @@ public class ColorController {
         return result;
     }
 
-    public static void RGB2YCbCr(short[][][] red, short[][][] green, short[][][] blue) {
+    public static void transformToYCbCr(short[][][] red, short[][][] green, short[][][] blue) {
         for (int k = 0; k < red.length; k++) {
             for (int i = 0; i < red[0].length; i++) {
                 for (int j = 0; j < red[0].length; j++) {
@@ -32,7 +32,7 @@ public class ColorController {
         }
     }
 
-        public static void YCbCr2RGB(short[][][] red, short[][][] green, short[][][] blue) {
+        public static void transfromToRGB(short[][][] red, short[][][] green, short[][][] blue) {
         for (int k = 0; k < red.length; k++) {
             for (int i = 0; i < red[0].length; i++) {
                 for (int j = 0; j < red[0].length; j++) {
@@ -50,7 +50,7 @@ public class ColorController {
         }
     }
 
-    public static short[][] GetGreenArray(int[][] src) {
+    public static short[][] getGreenRGBArray(int[][] src) {
         short[][] result = new short[src.length][src.length];
         for (int i = 0; i < src.length; i++) {
             for (int j = 0; j < src[0].length; j++) {
@@ -61,7 +61,7 @@ public class ColorController {
         return result;
     }
 
-    public static short[][] GetBlueArray(int[][] src) {
+    public static short[][] getBlueRGBArray(int[][] src) {
         short[][] result = new short[src.length][src.length];
         for (int i = 0; i < src.length; i++) {
             for (int j = 0; j < src[0].length; j++) {
@@ -73,7 +73,7 @@ public class ColorController {
         return result;
     }
     
-    public static int[][] GetRGBArray(short[][] red, short[][] green, short[][] blue) {
+    public static int[][] getIntRGBArray(short[][] red, short[][] green, short[][] blue) {
         int[][] result = new int[red.length][red.length];
         for (int i = 0; i < result.length; i++) {
             for (int j = 0; j < result.length; j++) {

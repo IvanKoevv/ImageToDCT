@@ -23,10 +23,10 @@ import imgcompressor.compressor.Compressor;
 
 public class Main extends JFrame {
 
-    private JButton button1;
-    private JButton button2;
-    private JButton button3;
-    private JLabel image;
+    private JButton buttonOpen;
+    private JButton buttonCompress;
+    private JButton buttonSave;
+    private JLabel labelImage;
     private JLabel sizeKb;
     private JSlider slider;
     private JTextField sliderVal;
@@ -42,30 +42,30 @@ public class Main extends JFrame {
         GridBagConstraints c = new GridBagConstraints();
         c.fill = GridBagConstraints.HORIZONTAL;
 
-        image = new JLabel();
+        labelImage = new JLabel();
         c.fill = GridBagConstraints.BOTH;
         c.weightx = 0;
         c.gridheight = 3;
         c.gridx = 0;
         c.gridy = 0;
-        this.add(image, c);
+        this.add(labelImage, c);
 
-        button1 = new JButton("Open file");
+        buttonOpen = new JButton("Open file");
         //button1.setBounds(200, 100, 100, 50);
         c.weightx = 0.5;
         c.gridheight = 1;
         c.fill = GridBagConstraints.HORIZONTAL;
         c.gridx = 1;
         c.gridy = 0;
-        button1.addActionListener(e -> {
+        buttonOpen.addActionListener(e -> {
             try {
                 a = null;
                 b = null;
                 System.gc();
                 a = new Img(this);
-                image.setIcon(new ImageIcon(a.image.getScaledInstance(-1, (int)dim.getHeight()/2, BufferedImage.SCALE_SMOOTH)));
-                button2.setEnabled(true);
-                button3.setEnabled(true);
+                labelImage.setIcon(new ImageIcon(a.image.getScaledInstance(-1, (int)dim.getHeight()/2, BufferedImage.SCALE_SMOOTH)));
+                buttonCompress.setEnabled(true);
+                buttonSave.setEnabled(true);
                 sizeKb.setText("<html>Raw 8-bit size: "+String.format("%.2f",a.getSrcSizeKb())+" Kb"+"<br>Actual file size: "+String.format("%.2f",a.getSrcFileSizeKb())+" Kb"+"</html>");
                 this.pack();
                 this.setLocation(dim.width/2-this.getSize().width/2, dim.height/2-this.getSize().height/2);
@@ -73,41 +73,41 @@ public class Main extends JFrame {
                 e1.printStackTrace();
             }
         });
-        this.add(button1, c);
+        this.add(buttonOpen, c);
         
-        button2 = new JButton("Compress");
-        button2.setEnabled(false);
+        buttonCompress = new JButton("Compress");
+        buttonCompress.setEnabled(false);
         c.fill = GridBagConstraints.HORIZONTAL;
         c.weightx = 0.5;
         c.gridx = 1;
         c.gridy = 1;
-        button2.addActionListener(e -> {
+        buttonCompress.addActionListener(e -> {
             b = new Compressor(a.getRGBArray(), (short) a.image.getHeight(), (short) a.image.getWidth());
             b.compress(slider.getValue(), 64);
-            a.setRGBArray(b.GetsRGBArray());
+            a.setRGBArray(b.getsRGBArray());
             sizeKb.setText("<html>Raw 8-bit size: " + String.format("%.2f", a.getSrcSizeKb()) + " Kb"
                     + "<br>Actual file size: " + String.format("%.2f", a.getSrcFileSizeKb()) + " Kb"
                     + "<br>Compressed File size: " + String.format("%.2f", b.getEncodeSizeKb()) + " Kb"
                     +"<br>Compression Ration: 1:"+String.format("%.2f",(a.getSrcSizeKb()/b.getEncodeSizeKb()))+ "</html>");
             this.pack();
         });
-        this.add(button2, c);
+        this.add(buttonCompress, c);
 
-        button3 = new JButton("Write to...");
-        button3.setEnabled(false);
+        buttonSave = new JButton("Write to...");
+        buttonSave.setEnabled(false);
         c.fill = GridBagConstraints.HORIZONTAL;
         c.weightx = 0.5;
         c.gridx = 1;
         c.gridy = 2;
         c.anchor = GridBagConstraints.FIRST_LINE_END;
-        button3.addActionListener(e -> {
+        buttonSave.addActionListener(e -> {
             try {
                 a.writeImg();
             } catch (IOException e1) {
                 e1.printStackTrace();
             }
         });
-        this.add(button3, c);
+        this.add(buttonSave, c);
         
         sizeKb = new JLabel();
         c.fill = GridBagConstraints.HORIZONTAL;
@@ -148,7 +148,7 @@ public class Main extends JFrame {
         this.pack();
         this.setVisible(true);
 
-        this.button1 = new JButton("1");
+        this.buttonOpen = new JButton("1");
     }
 
     public static void main(String[] args) {

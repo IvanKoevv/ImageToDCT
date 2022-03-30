@@ -8,12 +8,12 @@ import java.io.IOException;
 import javax.swing.JFileChooser;
 import javax.swing.filechooser.FileSystemView;
 import imgcompressor.utils.ColorController;
-import imgcompressor.utils.dft2D;
+import imgcompressor.utils.DctOperator;
 
 public class Compressor {
-    private short[][][] MCUred;
-    private short[][][] MCUgreen;
-    private short[][][] MCUblue;
+    private short[][][] mcuRed;
+    private short[][][] mcuGreen;
+    private short[][][] mcublue;
 
 
     private short height;
@@ -43,18 +43,18 @@ public class Compressor {
     };
 
     public Compressor() {
-        this.MCUred = null;
-        this.MCUblue = null;
-        this.MCUgreen = null;
+        this.mcuRed = null;
+        this.mcublue = null;
+        this.mcuGreen = null;
         this.height = 0;
         this.width = 0;
         this.mcuSize = 8;
     }
 
     public Compressor(int[][][] src, short height, short width) {
-        this.MCUred = new short[src.length][src[0].length][src[0].length];
-        this.MCUgreen = new short[src.length][src[0].length][src[0].length];
-        this.MCUblue = new short[src.length][src[0].length][src[0].length];
+        this.mcuRed = new short[src.length][src[0].length][src[0].length];
+        this.mcuGreen = new short[src.length][src[0].length][src[0].length];
+        this.mcublue = new short[src.length][src[0].length][src[0].length];
         this.height = height;
         this.width = width;
         this.mcuSize = src.length;
@@ -63,23 +63,23 @@ public class Compressor {
 
     public void fill(int[][][] src) {
         for (int i = 0; i < src.length; i++) {
-            MCUred[i] = ColorController.GetRedArray(src[i]);
-            MCUgreen[i] = ColorController.GetGreenArray(src[i]);
-            MCUblue[i] = ColorController.GetBlueArray(src[i]);
+            mcuRed[i] = ColorController.getRedRGBArray(src[i]);
+            mcuGreen[i] = ColorController.getGreenRGBArray(src[i]);
+            mcublue[i] = ColorController.getBlueRGBArray(src[i]);
         }
     }
 
-    public int[][][] GetsRGBArray() {
-        int[][][] temp = new int[MCUblue.length][MCUblue[0].length][MCUblue[0].length];
+    public int[][][] getsRGBArray() {
+        int[][][] temp = new int[mcublue.length][mcublue[0].length][mcublue[0].length];
         for (int i = 0; i < temp.length; i++) {
-            temp[i] = ColorController.GetRGBArray(MCUred[i], MCUgreen[i], MCUblue[i]);
+            temp[i] = ColorController.getIntRGBArray(mcuRed[i], mcuGreen[i], mcublue[i]);
         }
         return temp;
     }
 
     public void compress(int qFactor, int n) {
         this.qFactor = qFactor;
-        ColorController.RGB2YCbCr(MCUred, MCUgreen, MCUblue);
+        ColorController.transformToYCbCr(mcuRed, mcuGreen, mcublue);
         ShiftAroundZero();
         transform();
         KeepNZigZag(n);
@@ -91,15 +91,17 @@ public class Compressor {
         unquantisize(qFactor);
         transformInverse();
         UnShift();
-        ColorController.YCbCr2RGB(MCUred, MCUgreen, MCUblue);
+        ColorController.transfromToRGB(mcuRed, mcuGreen, mcublue);
     }
 
     public void encode() {
-        short[][][] zigzag = new short[3][MCUblue.length][64];
-        zigzag[0] = GetZigZagArray(MCUred);
-        zigzag[1] = GetZigZagArray(MCUgreen);
-        zigzag[2] = GetZigZagArray(MCUblue);
+        short[][][] zigzag = new short[3][mcublue.length][64];
+        zigzag[0] = getZigZagArray(mcuRed);
+        zigzag[1] = getZigZagArray(mcuGreen);
+        zigzag[2] = getZigZagArray(mcublue);
+
         JFileChooser chose = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
+
         if (chose.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
             File location = new File(chose.getSelectedFile().getAbsolutePath());
             encodeLocation = location;
@@ -144,7 +146,7 @@ public class Compressor {
                             }
                             if (curele != 0) {
                                 byte leading = (byte) count;
-                                byte[] payload = Short2ByteArray(curele);
+                                byte[] payload = toByteArray(curele);
                                 byte bytes = (byte) payload.length;
                                 leading <<= 4;
                                 leading = (byte) (leading | bytes);
@@ -175,14 +177,12 @@ public class Compressor {
             byte[] buff = new byte[2];
             buff = fileInputStream.readNBytes(2);
             this.height = ((short) (buff[0] << 8 | buff[1] & 0xff));
-            System.out.println((short) (buff[0] << 8 | buff[1] & 0xff));
             buff = fileInputStream.readNBytes(2);
-            System.out.println((short) (buff[0] << 8 | buff[1] & 0xff));
             this.width = ((short) (buff[0] << 8 | buff[1] & 0xff));
             this.mcuSize = fileInputStream.read();
             this.qFactor = fileInputStream.read();
             buff = fileInputStream.readAllBytes();
-            short[][][] zigzagarrays = new short[3][height * width / 64][64];
+            short[][][] zigZagArrays = new short[3][height * width / 64][64];
             int n = 0;
             int index = 0;
             int size = 0;
@@ -217,23 +217,23 @@ public class Compressor {
                     continue;
                 }
                 if (size == 1) {
-                    zigzagarrays[n][mcu][index] = ByteArray2Short(new byte[] { buff[i + 1] });
+                    zigZagArrays[n][mcu][index] = toShortArray(new byte[] { buff[i + 1] });
                     i += 1;
                     index += 1;
                     continue;
                 }
                 if (size == 2) {
-                    zigzagarrays[n][mcu][index] = ByteArray2Short(new byte[] { buff[i + 1], buff[i + 2] });
+                    zigZagArrays[n][mcu][index] = toShortArray(new byte[] { buff[i + 1], buff[i + 2] });
                     i += 2;
                     index += 1;
                 }
             }
-            MCUred = new short[(height * width) / (mcuSize * mcuSize)][mcuSize][mcuSize];
-            MCUgreen = new short[(height * width) / (mcuSize * mcuSize)][mcuSize][mcuSize];
-            MCUblue = new short[(height * width) / (mcuSize * mcuSize)][mcuSize][mcuSize];
-            SetZigZag(zigzagarrays[0], MCUred);
-            SetZigZag(zigzagarrays[1], MCUgreen);
-            SetZigZag(zigzagarrays[2], MCUblue);
+            mcuRed = new short[(height * width) / (mcuSize * mcuSize)][mcuSize][mcuSize];
+            mcuGreen = new short[(height * width) / (mcuSize * mcuSize)][mcuSize][mcuSize];
+            mcublue = new short[(height * width) / (mcuSize * mcuSize)][mcuSize][mcuSize];
+            setZigZag(zigZagArrays[0], mcuRed);
+            setZigZag(zigZagArrays[1], mcuGreen);
+            setZigZag(zigZagArrays[2], mcublue);
 
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -245,12 +245,12 @@ public class Compressor {
     }
 
     public void quantisize() {
-        for (int i = 0; i < MCUblue.length; i++) {
-            for (int j = 0; j < MCUblue[0].length; j++) {
-                for (int k = 0; k < MCUblue[0].length; k++) {
-                    MCUred[i][j][k] = (short)Math.round((float) MCUred[i][j][k] / (float) luminance[j][k]);
-                    MCUgreen[i][j][k] = (short)Math.round((float) MCUgreen[i][j][k] / (float) chrominance[j][k]);
-                    MCUblue[i][j][k] = (short)Math.round((float) MCUblue[i][j][k] / (float) chrominance[j][k]);
+        for (int i = 0; i < mcublue.length; i++) {
+            for (int j = 0; j < mcublue[0].length; j++) {
+                for (int k = 0; k < mcublue[0].length; k++) {
+                    mcuRed[i][j][k] = (short)Math.round((float) mcuRed[i][j][k] / (float) luminance[j][k]);
+                    mcuGreen[i][j][k] = (short)Math.round((float) mcuGreen[i][j][k] / (float) chrominance[j][k]);
+                    mcublue[i][j][k] = (short)Math.round((float) mcublue[i][j][k] / (float) chrominance[j][k]);
                 }
             }
         }
@@ -258,14 +258,14 @@ public class Compressor {
 
     private void quantisize(int n) {
         int S = (n >= 50) ? (5000 / n) : (200 - (2 * n));
-        for (int i = 0; i < MCUblue.length; i++) {
-            for (int j = 0; j < MCUblue[0].length; j++) {
-                for (int k = 0; k < MCUblue[0].length; k++) {
-                    MCUred[i][j][k] /= (Math.floor((S * luminance[j][k]) / 100) == 0) ? (1)
+        for (int i = 0; i < mcublue.length; i++) {
+            for (int j = 0; j < mcublue[0].length; j++) {
+                for (int k = 0; k < mcublue[0].length; k++) {
+                    mcuRed[i][j][k] /= (Math.floor((S * luminance[j][k]) / 100) == 0) ? (1)
                             : (short)(Math.floor(S * luminance[j][k] / 100));
-                    MCUgreen[i][j][k] /= (Math.floor((S * chrominance[j][k]) / 100) == 0) ? (1)
+                    mcuGreen[i][j][k] /= (Math.floor((S * chrominance[j][k]) / 100) == 0) ? (1)
                             : (short)(Math.floor(S * luminance[j][k] / 100));
-                    MCUblue[i][j][k] /= (Math.floor((S * chrominance[j][k]) / 100) == 0) ? (1)
+                    mcublue[i][j][k] /= (Math.floor((S * chrominance[j][k]) / 100) == 0) ? (1)
                             : (short)(Math.floor(S * luminance[j][k] / 100));
                 }
             }
@@ -273,12 +273,12 @@ public class Compressor {
     }
 
     public void unquantisize() {
-        for (int i = 0; i < MCUblue.length; i++) {
-            for (int j = 0; j < MCUblue[0].length; j++) {
-                for (int k = 0; k < MCUblue[0].length; k++) {
-                    MCUred[i][j][k] = (short)Math.round((float) MCUred[i][j][k] * (float) luminance[j][k]);
-                    MCUgreen[i][j][k] = (short)Math.round((float) MCUgreen[i][j][k] * (float) chrominance[j][k]);
-                    MCUblue[i][j][k] = (short)Math.round((float) MCUblue[i][j][k] * (float) chrominance[j][k]);
+        for (int i = 0; i < mcublue.length; i++) {
+            for (int j = 0; j < mcublue[0].length; j++) {
+                for (int k = 0; k < mcublue[0].length; k++) {
+                    mcuRed[i][j][k] = (short)Math.round((float) mcuRed[i][j][k] * (float) luminance[j][k]);
+                    mcuGreen[i][j][k] = (short)Math.round((float) mcuGreen[i][j][k] * (float) chrominance[j][k]);
+                    mcublue[i][j][k] = (short)Math.round((float) mcublue[i][j][k] * (float) chrominance[j][k]);
                 }
             }
         }
@@ -286,14 +286,14 @@ public class Compressor {
 
     private void unquantisize(int n) {
         int S = (n >= 50) ? (5000 / n) : (200 - (2 * n));
-        for (int i = 0; i < MCUblue.length; i++) {
-            for (int j = 0; j < MCUblue[0].length; j++) {
-                for (int k = 0; k < MCUblue[0].length; k++) {
-                    MCUred[i][j][k] *= (Math.floor((S * luminance[j][k]) / 100) == 0) ? (1)
+        for (int i = 0; i < mcublue.length; i++) {
+            for (int j = 0; j < mcublue[0].length; j++) {
+                for (int k = 0; k < mcublue[0].length; k++) {
+                    mcuRed[i][j][k] *= (Math.floor((S * luminance[j][k]) / 100) == 0) ? (1)
                             : (short)(Math.floor(S * luminance[j][k] / 100));
-                    MCUgreen[i][j][k] *= (Math.floor((S * chrominance[j][k]) / 100) == 0) ? (1)
+                    mcuGreen[i][j][k] *= (Math.floor((S * chrominance[j][k]) / 100) == 0) ? (1)
                             : (short)(Math.floor(S * luminance[j][k] / 100));
-                    MCUblue[i][j][k] *= (Math.floor((S * chrominance[j][k]) / 100) == 0) ? (1)
+                    mcublue[i][j][k] *= (Math.floor((S * chrominance[j][k]) / 100) == 0) ? (1)
                             : (short)(Math.floor(S * luminance[j][k] / 100));
                 }
             }
@@ -301,40 +301,40 @@ public class Compressor {
     }
 
     private void transform() {
-        for (int i = 0; i < MCUblue.length; i++) {
-            MCUred[i] = dft2D.forward(MCUred[i]);
-            MCUgreen[i] = dft2D.forward(MCUgreen[i]);
-            MCUblue[i] = dft2D.forward(MCUblue[i]);
+        for (int i = 0; i < mcublue.length; i++) {
+            mcuRed[i] = DctOperator.forward(mcuRed[i]);
+            mcuGreen[i] = DctOperator.forward(mcuGreen[i]);
+            mcublue[i] = DctOperator.forward(mcublue[i]);
         }
     }
 
     private void transformInverse() {
-        for (int i = 0; i < MCUblue.length; i++) {
-            MCUred[i] = dft2D.backward(MCUred[i]);
-            MCUgreen[i] = dft2D.backward(MCUgreen[i]);
-            MCUblue[i] = dft2D.backward(MCUblue[i]);
+        for (int i = 0; i < mcublue.length; i++) {
+            mcuRed[i] = DctOperator.backward(mcuRed[i]);
+            mcuGreen[i] = DctOperator.backward(mcuGreen[i]);
+            mcublue[i] = DctOperator.backward(mcublue[i]);
         }
     }
 
     private void ShiftAroundZero() {
-        for (int i = 0; i < MCUblue.length; i++) {
-            for (int j = 0; j < MCUblue[0].length; j++) {
-                for (int k = 0; k < MCUblue[0][0].length; k++) {
-                    MCUred[i][j][k] -= 128;
-                    MCUgreen[i][j][k] -= 128;
-                    MCUblue[i][j][k] -= 128;
+        for (int i = 0; i < mcublue.length; i++) {
+            for (int j = 0; j < mcublue[0].length; j++) {
+                for (int k = 0; k < mcublue[0][0].length; k++) {
+                    mcuRed[i][j][k] -= 128;
+                    mcuGreen[i][j][k] -= 128;
+                    mcublue[i][j][k] -= 128;
                 }
             }
         }
     }
 
     private void UnShift() {
-        for (int i = 0; i < MCUblue.length; i++) {
-            for (int j = 0; j < MCUblue[0].length; j++) {
-                for (int k = 0; k < MCUblue[0][0].length; k++) {
-                    MCUred[i][j][k] += 128;
-                    MCUgreen[i][j][k] += 128;
-                    MCUblue[i][j][k] += 128;
+        for (int i = 0; i < mcublue.length; i++) {
+            for (int j = 0; j < mcublue[0].length; j++) {
+                for (int k = 0; k < mcublue[0][0].length; k++) {
+                    mcuRed[i][j][k] += 128;
+                    mcuGreen[i][j][k] += 128;
+                    mcublue[i][j][k] += 128;
                 }
             }
         }
@@ -343,17 +343,17 @@ public class Compressor {
     private void KeepNZigZag(int n) {
         int row, col, count;
         boolean row_inc = false;
-        for (int k = 0; k < MCUblue.length; k++) {
+        for (int k = 0; k < mcublue.length; k++) {
             row = 0;
             col = 0;
             count = 0;
             // Print matrix of lower half zig-zag pattern
-            for (int len = 1; len <= MCUblue[0].length; ++len) {
+            for (int len = 1; len <= mcublue[0].length; ++len) {
                 for (int i = 0; i < len; ++i) {
                     if (count > n) {
-                        MCUred[k][row][col] = 0;
-                        MCUgreen[k][row][col] = 0;
-                        MCUblue[k][row][col] = 0;
+                        mcuRed[k][row][col] = 0;
+                        mcuGreen[k][row][col] = 0;
+                        mcublue[k][row][col] = 0;
                     }
                     count++;
                     if (i + 1 == len)
@@ -371,7 +371,7 @@ public class Compressor {
                     }
                 }
 
-                if (len == MCUblue[0].length)
+                if (len == mcublue[0].length)
                     break;
                 // Update row or col value according
                 // to the last increment
@@ -386,13 +386,13 @@ public class Compressor {
 
             // Update the indexes of row and col variable
             if (row == 0) {
-                if (col == MCUblue[0].length - 1)
+                if (col == mcublue[0].length - 1)
                     ++row;
                 else
                     ++col;
                 row_inc = true;
             } else {
-                if (row == MCUblue[0].length - 1)
+                if (row == mcublue[0].length - 1)
                     ++col;
                 else
                     ++row;
@@ -400,18 +400,18 @@ public class Compressor {
             }
 
             // Print the next half zig-zag pattern
-            for (int len, diag = MCUblue[0].length - 1; diag > 0; --diag) {
+            for (int len, diag = mcublue[0].length - 1; diag > 0; --diag) {
 
-                if (diag > MCUblue[0].length)
-                    len = MCUblue[0].length;
+                if (diag > mcublue[0].length)
+                    len = mcublue[0].length;
                 else
                     len = diag;
 
                 for (int i = 0; i < len; ++i) {
                     if (count > n) {
-                        MCUred[k][row][col] = 0;
-                        MCUgreen[k][row][col] = 0;
-                        MCUblue[k][row][col] = 0;
+                        mcuRed[k][row][col] = 0;
+                        mcuGreen[k][row][col] = 0;
+                        mcublue[k][row][col] = 0;
                     }
                     count++;
 
@@ -429,8 +429,8 @@ public class Compressor {
                 }
 
                 // Update the indexes of row and col variable
-                if (row == 0 || col == (MCUblue[0].length - 1)) {
-                    if (col == (MCUblue[0].length - 1))
+                if (row == 0 || col == (mcublue[0].length - 1)) {
+                    if (col == (mcublue[0].length - 1))
                         ++row;
                     else
                         ++col;
@@ -438,8 +438,8 @@ public class Compressor {
                     row_inc = true;
                 }
 
-                else if (col == 0 || row == (MCUblue[0].length - 1)) {
-                    if (row == (MCUblue[0].length - 1))
+                else if (col == 0 || row == (mcublue[0].length - 1)) {
+                    if (row == (mcublue[0].length - 1))
                         ++col;
                     else
                         ++row;
@@ -450,7 +450,7 @@ public class Compressor {
         }
     }
 
-    private void SetZigZag(short src[][], short dest[][][]) {
+    private void setZigZag(short src[][], short dest[][][]) {
         int row, col, count;
         boolean row_inc = false;
         for (int k = 0; k < dest.length; k++) {
@@ -552,7 +552,7 @@ public class Compressor {
         }
     }
 
-    private short[][] GetZigZagArray(short[][][] src) {
+    private short[][] getZigZagArray(short[][][] src) {
         short[][] result = new short[src.length][64];
         int row, col, count;
         boolean row_inc = false;
@@ -657,7 +657,7 @@ public class Compressor {
 
     }
 
-    public byte[] Short2ByteArray(short src) {
+    public byte[] toByteArray(short src) {
         byte[] result;
         if (src <= 255) {
             result = new byte[1];
@@ -670,7 +670,7 @@ public class Compressor {
         return result;
     }
 
-    public short ByteArray2Short(byte[] src) {
+    public short toShortArray(byte[] src) {
         short result;
         if (src.length == 1) {
             result = src[0];

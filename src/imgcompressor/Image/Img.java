@@ -15,7 +15,7 @@ import imgcompressor.compressor.Compressor;
 
 public class Img {
     public BufferedImage image;
-    private File imglocation;
+    private File imgLocation;
     public BufferedImage result;
     private int mcuSize;
     public Compressor compressor;
@@ -25,26 +25,34 @@ public class Img {
         FileNameExtensionFilter filter = new FileNameExtensionFilter("byte and images", "jpg", "byte", "png");
         chose.setFileFilter(filter);
         int returnVal = chose.showOpenDialog(main);
+
         if (returnVal == JFileChooser.APPROVE_OPTION) {
             this.mcuSize = 8;
             File location = new File(chose.getSelectedFile().getAbsolutePath());
             String s = chose.getSelectedFile().toString();
+
             if (s.substring(s.lastIndexOf(".")).equals(".byte")) {
                 compressor = new Compressor();
                 compressor.decode(new File(s));
-                this.image = new BufferedImage(compressor.getWidth(), compressor.getHeight(),
+                this.image = new BufferedImage(
+                        compressor.getWidth(),
+                        compressor.getHeight(),
                         BufferedImage.TYPE_INT_RGB);
-                this.result = new BufferedImage(compressor.getWidth(), compressor.getHeight(),
+                this.result = new BufferedImage(
+                        compressor.getWidth(),
+                        compressor.getHeight(),
                         BufferedImage.TYPE_INT_RGB);
                 compressor.decompress();
-                setRGBArray(compressor.GetsRGBArray());
-                this.image = new BufferedImage(result.getColorModel(), result.copyData(null),
+                setRGBArray(compressor.getsRGBArray());
+                this.image = new BufferedImage(
+                        result.getColorModel(),
+                        result.copyData(null),
                         result.isAlphaPremultiplied(), null);
             } else {
-                this.image = resizetomcuSize(ImageIO.read(location), mcuSize);
-                this.result = resizetomcuSize(ImageIO.read(location), mcuSize);
+                this.image = resizeToMcuSize(ImageIO.read(location), mcuSize);
+                this.result = resizeToMcuSize(ImageIO.read(location), mcuSize);
             }
-            this.imglocation = location;
+            this.imgLocation = location;
         }
     }
 
@@ -66,7 +74,7 @@ public class Img {
         ImageIO.write(result, "PNG", new File(chose.getSelectedFile().getAbsolutePath()));
     }
 
-    private BufferedImage resizetomcuSize(BufferedImage src, int mcuSize) {
+    private BufferedImage resizeToMcuSize(BufferedImage src, int mcuSize) {
         int newWidth = src.getWidth() - (src.getWidth() % mcuSize);
         int newHeight = src.getHeight() - (src.getHeight() % mcuSize);
         BufferedImage newImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
@@ -84,7 +92,6 @@ public class Img {
     public int[][][] getRGBArray() {
         int[][][] result = new int[this.getMcuCount()][mcuSize][mcuSize];
         int blocksRight = image.getWidth() / mcuSize;
-        //int blocksDown = image.getHeight() / mcuSize;
         for (int i = 0, offx = 0, offy = 0; i < getMcuCount(); i++, offx++) {
             if (offx == blocksRight) {
                 offy++;
@@ -101,7 +108,6 @@ public class Img {
 
     public void setRGBArray(int[][][] input) {
         int blocksRight = image.getWidth() / mcuSize;
-        //int blocksDown = image.getHeight() / mcuSize;
         for (int i = 0, offx = 0, offy = 0; i < getMcuCount(); i++, offx++) {
             if (offx == blocksRight) {
                 offy++;
@@ -121,7 +127,7 @@ public class Img {
     }
 
     public double getSrcFileSizeKb() {
-        double srcSizeFile = imglocation.length()/1024d;
+        double srcSizeFile = imgLocation.length()/1024d;
         return srcSizeFile;
     }
 
