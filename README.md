@@ -1,6 +1,6 @@
 ## About
 
-This project is the practical part of my batchelors work. It is a self implementation of image compression using the Descreet Cosine Transfrom(DCT) based on the methodology of JPEG. There are no outside package dependancies. The project uses only standart Java libs. There are two implemented dct's the slow direct way and the faster AAN algorith.
+This project is the practical part of my batchelors work. It is a self implementation of lossy image compression using the Descreet Cosine Transfrom(DCT) based on the methodology of JPEG. There are no external dependancies. The project uses only standart Java libs. Curently there are two implemented dct's the slow direct way and the faster AAN algorith.
 
 The app has a gui that allows the user to:
 
@@ -21,3 +21,18 @@ The app has a gui that allows the user to:
 8. Run lenth encode the zigzag matrix starting from top left to bottom right based on the amount of zeroes preceding each element in little endian format. With first 1 byte for length of 0 and amount of bytes to code the Value. The first 4 bits are for 0 and the last 4 bits are for amount. Bytes afterward are the Value 
 (0 length,amount of bytes to represent X)(Value of x)
 Example {10, 0, 1} -> {(0,1)(10); (1,1)(1)  }
+
+
+## TODO
+
+- Add PSNR and mean statistical error metric
+- debug boundary cases of decode algorithm
+- clean up code
+- unify repeating zigzag methods
+- add loading message to UI
+- write proper comments
+- make compression save dialog force .byte extension
+- set max and min open image sizes
+- maybe rename methods to accurately represent what they do
+- continue developing NxN matrix sizes and allow them
+- maybe decouple image logic thread from UI
