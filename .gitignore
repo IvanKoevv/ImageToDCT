@@ -2,3 +2,5 @@ resources/
 bin/
 .vscode/
 lib/
+.settings/
+ImageToFft.jar
