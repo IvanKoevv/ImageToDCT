@@ -104,11 +104,11 @@ public class ColorController {
     
 
 
-        public static int[][][] getMcuRGBArray(int mcuSize, BufferedImage image,int McuCount) {
-        int[][][] result = new int[McuCount][mcuSize][mcuSize];
+        public static int[][][] getMcuRGBArray(int mcuSize, BufferedImage image,int mcuCount) {
+        int[][][] result = new int[mcuCount][mcuSize][mcuSize];
         int blocksRight = image.getWidth() / mcuSize;
         //int blocksDown = image.getHeight() / mcuSize;
-        for (int i = 0, offx = 0, offy = 0; i < McuCount; i++, offx++) {
+        for (int i = 0, offx = 0, offy = 0; i < mcuCount; i++, offx++) {
             if (offx == blocksRight) {
                 offy++;
                 offx = 0;
