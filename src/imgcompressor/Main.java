@@ -30,6 +30,7 @@ public class Main extends JFrame {
     private JLabel sizeKb;
     private JSlider slider;
     private JTextField sliderVal;
+    private JTextField coefVal;
     private Img a;
     private Compressor b;
 
@@ -51,7 +52,6 @@ public class Main extends JFrame {
         this.add(labelImage, c);
 
         buttonOpen = new JButton("Open file");
-        //button1.setBounds(200, 100, 100, 50);
         c.weightx = 0.5;
         c.gridheight = 1;
         c.fill = GridBagConstraints.HORIZONTAL;
@@ -63,7 +63,10 @@ public class Main extends JFrame {
                 b = null;
                 System.gc();
                 a = new Img(this);
-                labelImage.setIcon(new ImageIcon(a.image.getScaledInstance(-1, (int)dim.getHeight()/2, BufferedImage.SCALE_SMOOTH)));
+                labelImage.setIcon(new ImageIcon(
+                        a.image.getScaledInstance(-1, (int) dim.getHeight() / 2, BufferedImage.SCALE_SMOOTH)));
+                //labelImage.revalidate();
+                labelImage.repaint();
                 buttonCompress.setEnabled(true);
                 buttonSave.setEnabled(true);
                 sizeKb.setText("<html>Raw 8-bit size: "+String.format("%.2f",a.getSrcSizeKb())+" Kb"+"<br>Actual file size: "+String.format("%.2f",a.getSrcFileSizeKb())+" Kb"+"</html>");
@@ -75,7 +78,7 @@ public class Main extends JFrame {
         });
         this.add(buttonOpen, c);
         
-        buttonCompress = new JButton("Compress");
+        buttonCompress = new JButton("Compress to..");
         buttonCompress.setEnabled(false);
         c.fill = GridBagConstraints.HORIZONTAL;
         c.weightx = 0.5;
@@ -83,17 +86,22 @@ public class Main extends JFrame {
         c.gridy = 1;
         buttonCompress.addActionListener(e -> {
             b = new Compressor(a.getRGBArray(), (short) a.image.getHeight(), (short) a.image.getWidth());
-            b.compress(slider.getValue(), 64);
+            b.compress(slider.getValue(), Integer.parseInt(coefVal.getText()));
+            b.decompress();
             a.setRGBArray(b.getsRGBArray());
             sizeKb.setText("<html>Raw 8-bit size: " + String.format("%.2f", a.getSrcSizeKb()) + " Kb"
                     + "<br>Actual file size: " + String.format("%.2f", a.getSrcFileSizeKb()) + " Kb"
-                    + "<br>Compressed File size: " + String.format("%.2f", b.getEncodeSizeKb()) + " Kb"
-                    +"<br>Compression Ration: 1:"+String.format("%.2f",(a.getSrcSizeKb()/b.getEncodeSizeKb()))+ "</html>");
+                    + "<br>Compressed file size: " + String.format("%.2f", b.getEncodeSizeKb()) + " Kb"
+                    + "<br>Compression Ration: 1:" + String.format("%.2f", (a.getSrcSizeKb() / b.getEncodeSizeKb()))
+                    + "</html>");
+            labelImage.setIcon(new ImageIcon(a.result.getScaledInstance(-1, (int)dim.getHeight()/2, BufferedImage.SCALE_SMOOTH)));
+            //labelImage.revalidate();
+            labelImage.repaint();
             this.pack();
         });
         this.add(buttonCompress, c);
 
-        buttonSave = new JButton("Write to...");
+        buttonSave = new JButton("Write to..");
         buttonSave.setEnabled(false);
         c.fill = GridBagConstraints.HORIZONTAL;
         c.weightx = 0.5;
@@ -114,7 +122,6 @@ public class Main extends JFrame {
         c.gridx = 1;
         c.gridy = 3;
         this.add(sizeKb, c);
-        //c.anchor = GridBagConstraints.NORTH;
 
         slider = new JSlider(JSlider.HORIZONTAL, 1, 100, 50);
         slider.setBorder(BorderFactory.createTitledBorder("Chose quality factor"));
@@ -123,16 +130,31 @@ public class Main extends JFrame {
         c.fill = GridBagConstraints.HORIZONTAL;
         c.weightx = 0.5;
         c.gridx = 0;
-        c.gridy = 4;
+        c.gridy = 5;
         slider.addChangeListener(e -> sliderVal.setText(String.valueOf(slider.getValue())));
         this.add(slider, c);
 
-        sliderVal = new JTextField();
-        sliderVal.setText("50");
+        coefVal = new JTextField();
+        coefVal.setText("64");
+        coefVal.setBorder(BorderFactory.createTitledBorder("DCT coef's:"));
         c.fill = GridBagConstraints.HORIZONTAL;
         c.anchor = GridBagConstraints.LAST_LINE_END;
         c.gridx = 1;
         c.gridy = 4;
+        coefVal.addActionListener(e -> {
+            if (Integer.parseInt(coefVal.getText()) > 64) coefVal.setText("64");
+            if (Integer.parseInt(coefVal.getText()) < 1) coefVal.setText("1");
+            
+        });
+        this.add(coefVal, c);
+
+        sliderVal = new JTextField();
+        sliderVal.setBorder(BorderFactory.createTitledBorder("Quality:"));
+        sliderVal.setText("50");
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.anchor = GridBagConstraints.LAST_LINE_END;
+        c.gridx = 1;
+        c.gridy = 5;
         sliderVal.addActionListener(e -> {
             if (Integer.parseInt(sliderVal.getText()) > 100) sliderVal.setText("100");
             if (Integer.parseInt(sliderVal.getText()) < 1) sliderVal.setText("1");
@@ -147,14 +169,12 @@ public class Main extends JFrame {
         this.setLocationRelativeTo(null);
         this.pack();
         this.setVisible(true);
-
-        this.buttonOpen = new JButton("1");
     }
 
     public static void main(String[] args) {
         double[] test = {1,2,3,4};
-        System.out.println(Arrays.toString(SlowDct.transform(test)));
-        System.out.println(Arrays.toString(SlowDct.test(test)));
+        //System.out.println(Arrays.toString(SlowDct.transform(test)));
+        //System.out.println(Arrays.toString(SlowDct.test(test)));
         //System.out.println(Arrays.toString(FastDct8.transform(test)));
         //System.out.println(Arrays.toString(FastDct8.transform(test)));
          try {
@@ -163,11 +183,11 @@ public class Main extends JFrame {
                 | UnsupportedLookAndFeelException e) {
             e.printStackTrace();
         }
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                new Main();
-            }
-        });
+            SwingUtilities.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    new Main();
+                }
+            });
     }
 }
