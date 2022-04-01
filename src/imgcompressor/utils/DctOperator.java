@@ -9,7 +9,7 @@ public class DctOperator {
         doDctPerRow(src);
         src = transposeMatrix(src);
         doDctPerRow(src);
-        src = transposeMatrix(src);
+        //src = transposeMatrix(src);
         return src;
     }
 
@@ -17,7 +17,7 @@ public class DctOperator {
         IDctPerRow(src);
         src = transposeMatrix(src);
         IDctPerRow(src);
-        src = transposeMatrix(src);
+        //src = transposeMatrix(src);
         return src;
     }
     
