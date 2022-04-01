@@ -1,3 +1,5 @@
+![Alt text](readmeImage.jpg?raw=true "Title")
+
 ## About
 
 This project is the practical part of my batchelors work. It is a self implementation of lossy image compression using the Descreet Cosine Transfrom(DCT) based on the methodology of JPEG. There are no external dependancies. The project uses only standart Java libs. Curently there are two implemented dct's the slow direct way and the faster AAN algorith.
