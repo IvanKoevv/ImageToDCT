@@ -1,5 +1,6 @@
 package imgcompressor.compressor;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -10,17 +11,20 @@ import javax.swing.filechooser.FileSystemView;
 import imgcompressor.utils.ColorController;
 import imgcompressor.utils.DctOperator;
 
-public class Compressor {
+public class CompressorController {
     private short[][][] mcuRed;
     private short[][][] mcuGreen;
     private short[][][] mcuBlue;
+    private ByteArrayOutputStream encodedBytes;
 
 
     private short height;
     private short width;
+    private int mcuCount;
     private int mcuSize;
     private int qFactor;
-    private File encodeLocation;
+
+
     private static final int luminance[][] = {
             { 16, 11, 10, 16, 24, 40, 51, 61 },
             { 12, 12, 14, 19, 26, 58, 60, 55 },
@@ -42,22 +46,24 @@ public class Compressor {
             { 99, 99, 99, 98, 99, 99, 99, 99 }
     };
 
-    public Compressor() {
+    public CompressorController() {
         this.mcuRed = null;
         this.mcuBlue = null;
         this.mcuGreen = null;
         this.height = 0;
         this.width = 0;
-        this.mcuSize = 8;
+        this.mcuCount = 0;
     }
 
-    public Compressor(int[][][] src, short height, short width) {
+    public CompressorController(int[][][] src, short height, short width) {
         this.mcuRed = new short[src.length][src[0].length][src[0].length];
         this.mcuGreen = new short[src.length][src[0].length][src[0].length];
         this.mcuBlue = new short[src.length][src[0].length][src[0].length];
         this.height = height;
         this.width = width;
-        this.mcuSize = src.length;
+        this.mcuCount = src.length;
+        this.mcuSize = ((height * width) / mcuCount);
+        this.encodedBytes = new ByteArrayOutputStream();
         fill(src);
     }
 
@@ -81,119 +87,144 @@ public class Compressor {
         this.qFactor = qFactor;
         ColorController.transformToYCbCr(mcuRed, mcuGreen, mcuBlue);
         ShiftAroundZero();
-        transform();
+        transformDCT();
+        KeepNZigZag(n);
+        quantisize(qFactor);
+        encode();
+        writeBinaryFile();
+    }
+
+    public void compressNoWrite(int qFactor, int n) {
+        this.qFactor = qFactor;
+        ColorController.transformToYCbCr(mcuRed, mcuGreen, mcuBlue);
+        ShiftAroundZero();
+        transformDCT();
         KeepNZigZag(n);
         quantisize(qFactor);
         encode();
     }
 
+
     public void decompress() {
         unquantisize(qFactor);
-        transformInverse();
+        transformInverseDCT();
         UnShift();
-        ColorController.transfromToRGB(mcuRed, mcuGreen, mcuBlue);
+        ColorController.transformToRGB(mcuRed, mcuGreen, mcuBlue);
     }
 
-    public void encode() {
-        short[][][] zigzag = new short[3][mcuBlue.length][64];
-        zigzag[0] = getZigZagArray(mcuRed);
-        zigzag[1] = getZigZagArray(mcuGreen);
-        zigzag[2] = getZigZagArray(mcuBlue);
-
+    public void writeBinaryFile() {
         JFileChooser chose = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
 
         if (chose.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
             File location = new File(chose.getSelectedFile().getAbsolutePath());
-            encodeLocation = location;
-            try (FileOutputStream fileOutputStream = new FileOutputStream(location, false)) {
-                fileOutputStream.write(new byte[] { (byte) (height >>> 8), (byte) (height & 0xff) });
-                fileOutputStream.write(new byte[] { (byte) (width >>> 8), (byte) (width & 0xff) });
-                fileOutputStream.write((int) Math.sqrt(zigzag[0][0].length));
-                fileOutputStream.write(qFactor);
+            
+            try (FileOutputStream out = new FileOutputStream(location, false)) {
+                encodedBytes.writeTo(out);
 
-                for (int n = 0; n < 3; n++) {
-                    for (int k = 0; k < zigzag[n].length; k++) {
-                        short count = 0;
-                        short curele;
-                        boolean eob = false;
-                        for (int i = 0; i < zigzag[n][0].length; i++) {
-                            if (eob == true) {
-                                break;
-                            }
-                            curele = zigzag[n][k][i];
+            } catch (FileNotFoundException eF) {
+                eF.printStackTrace();
 
-                            if (curele == 0) {
-                                for (int j = i; j < zigzag[n][0].length; j++) {
-                                    if ((j == 63) && (zigzag[n][k][j] == 0)) {
-                                        fileOutputStream.write(0);
-                                        eob = true;
-                                        break;
-                                    }
-                                    if (zigzag[n][k][j] == 0) {
-                                        continue;
-                                    } else {
-                                        break;
-                                    }
-                                }
-                            }
-                            if (eob == true) {
-                                break;
-                            }
-                            if (curele == 0) {
-                                count++;
-                                continue;
-                            }
-                            if (count == 15) {
-                                fileOutputStream.write(0xf0);
-                                count = 0;
-                                continue;
-                            }
-                            if (curele != 0) {
-                                byte leading = (byte) count;
-                                byte[] payload = toByteArray(curele);
-                                byte bytes = (byte) payload.length;
-                                leading <<= 4;
-                                leading = (byte) (leading | bytes);
-                                fileOutputStream.write(leading);
-                                fileOutputStream.write(payload);
-                                count = 0;
-                            }
-                            if (i == 63) {
-                                fileOutputStream.write(0);
-                                eob = true;
-                            }
-                        }
-                    }
-                }
-
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-                System.exit(1);
-            } catch (IOException e) {
-                e.printStackTrace();
-                System.exit(1);
+            } catch (IOException eIo) {
+                eIo.printStackTrace();
             }
         }
     }
+
+    public void encode() {
+        short[][][] zigzag = new short[3][mcuBlue.length][mcuSize];
+        zigzag[0] = getZigZagArray(mcuRed);
+        zigzag[1] = getZigZagArray(mcuGreen);
+        zigzag[2] = getZigZagArray(mcuBlue);
+
+        try {
+            encodedBytes.write(new byte[] { (byte) (height >>> 8), (byte) (height & 0xff) });
+            encodedBytes.write(new byte[] { (byte) (width >>> 8), (byte) (width & 0xff) });
+            encodedBytes.write((int) Math.sqrt(zigzag[0][0].length));
+            encodedBytes.write(qFactor);
+
+            for (int n = 0; n < 3; n++) {
+                for (int k = 0; k < zigzag[n].length; k++) {
+                    short count = 0;
+                    short curele;
+                    boolean eob = false;
+                    for (int i = 0; i < zigzag[n][0].length; i++) {
+                        if (eob == true) {
+                            break;
+                        }
+                        curele = zigzag[n][k][i];
+
+                        if (curele == 0) {
+                            for (int j = i; j < zigzag[n][0].length; j++) {
+                                if ((j == mcuSize - 1) && (zigzag[n][k][j] == 0)) {
+                                    encodedBytes.write(0);
+                                    eob = true;
+                                    break;
+                                }
+                                if (zigzag[n][k][j] == 0) {
+                                    continue;
+                                } else {
+                                    break;
+                                }
+                            }
+                        }
+                        if (eob == true) {
+                            break;
+                        }
+                        if (curele == 0) {
+                            count++;
+                            continue;
+                        }
+                        if (count == 15) {
+                            encodedBytes.write(0xf0);
+                            count = 0;
+                            continue;
+                        }
+                        if (curele != 0) {
+                            byte leading = (byte) count;
+                            byte[] payload = toByteArray(curele);
+                            byte bytes = (byte) payload.length;
+                            leading <<= 4;
+                            leading = (byte) (leading | bytes);
+                            encodedBytes.write(leading);
+                            encodedBytes.write(payload);
+                            count = 0;
+                        }
+                        if (i == mcuSize - 1) {
+                            encodedBytes.write(0);
+                            eob = true;
+                        }
+                    }
+                }
+            }
+        } catch (IOException eIo) {
+            eIo.printStackTrace();
+        }
+    }
+    
+        
+        
 
     public void decode(File location) {
         try (FileInputStream fileInputStream = new FileInputStream(location)) {
             byte[] buff = new byte[2];
             buff = fileInputStream.readNBytes(2);
-            this.height = ((short) (buff[0] << 8 | buff[1] & 0xff));
+            setHeight(((short) (buff[0] << 8 | buff[1] & 0xff)));
             buff = fileInputStream.readNBytes(2);
-            this.width = ((short) (buff[0] << 8 | buff[1] & 0xff));
-            this.mcuSize = fileInputStream.read();
-            this.qFactor = fileInputStream.read();
+            setWidth(((short) (buff[0] << 8 | buff[1] & 0xff)));
+            int mcuSizebuff =  fileInputStream.read();
+            setMcuSize(mcuSizebuff * mcuSizebuff);
+            setqFactor(fileInputStream.read());
+            setMcuCount((height * width) / mcuSize);
+
             buff = fileInputStream.readAllBytes();
-            short[][][] zigZagArrays = new short[3][height * width / 64][64];
+            short[][][] zigZagArrays = new short[3][mcuCount][mcuSize];
             int n = 0;
             int index = 0;
             int size = 0;
             int count = 0;
             int mcu = 0;
             for (int i = 0; i < buff.length; i++) {
-                if (index > 63) {
+                if (index > mcuSize-1) {
                     index = 0;
                     continue;
                 }
@@ -209,14 +240,14 @@ public class Compressor {
                 index += count;
                 if (buff[i] == 0x00) {
                     mcu += 1;
-                    if (mcu >= (height * width / 64)) {
+                    if (mcu >= (height * width / mcuSize)) {
                         n++;
                         mcu = 0;
                     }
                     index = 0;
                     continue;
                 }
-                if (index > 63) {
+                if (index > mcuSize-1) {
                     index = 0;
                     continue;
                 }
@@ -232,9 +263,9 @@ public class Compressor {
                     index += 1;
                 }
             }
-            mcuRed = new short[(height * width) / (mcuSize * mcuSize)][mcuSize][mcuSize];
-            mcuGreen = new short[(height * width) / (mcuSize * mcuSize)][mcuSize][mcuSize];
-            mcuBlue = new short[(height * width) / (mcuSize * mcuSize)][mcuSize][mcuSize];
+            mcuRed = new short[mcuCount][(int)Math.sqrt(mcuSize)][(int)Math.sqrt(mcuSize)];
+            mcuGreen = new short[mcuCount][(int)Math.sqrt(mcuSize)][(int)Math.sqrt(mcuSize)];
+            mcuBlue = new short[mcuCount][(int)Math.sqrt(mcuSize)][(int)Math.sqrt(mcuSize)];
             setZigZag(zigZagArrays[0], mcuRed);
             setZigZag(zigZagArrays[1], mcuGreen);
             setZigZag(zigZagArrays[2], mcuBlue);
@@ -248,38 +279,22 @@ public class Compressor {
         }
     }
 
-    public void quantisize() {
-        for (int i = 0; i < mcuBlue.length; i++) {
-            for (int j = 0; j < mcuBlue[0].length; j++) {
-                for (int k = 0; k < mcuBlue[0].length; k++) {
-                    mcuRed[i][j][k] = (short)Math.round((float) mcuRed[i][j][k] / (float) luminance[j][k]);
-                    mcuGreen[i][j][k] = (short)Math.round((float) mcuGreen[i][j][k] / (float) chrominance[j][k]);
-                    mcuBlue[i][j][k] = (short)Math.round((float) mcuBlue[i][j][k] / (float) chrominance[j][k]);
-                }
-            }
-        }
-    }
 
     private void quantisize(int n) {
         double S = ((200d - 2d * n) / 100d);
         for (int i = 0; i < mcuBlue.length; i++) {
             for (int j = 0; j < mcuBlue[0].length; j++) {
                 for (int k = 0; k < mcuBlue[0].length; k++) {
-                    mcuRed[i][j][k] = (short) (Math.round(mcuRed[i][j][k] / (S * luminance[j][k])));
-                    mcuGreen[i][j][k] = (short) (Math.round(mcuGreen[i][j][k] / (S * chrominance[j][k])));
-                    mcuBlue[i][j][k] = (short) (Math.round(mcuBlue[i][j][k] / (S * chrominance[j][k])));
-                }
-            }
-        }
-    }
+                    double scaledLum = Math.ceil(S * luminance[j][k]);
+                    double scaledChrom = Math.ceil(S * chrominance[j][k]);
+                    if (scaledLum == 0)
+                        scaledChrom = 1;
+                    if (scaledLum == 0)
+                        scaledChrom = 1;
 
-    public void unquantisize() {
-        for (int i = 0; i < mcuBlue.length; i++) {
-            for (int j = 0; j < mcuBlue[0].length; j++) {
-                for (int k = 0; k < mcuBlue[0].length; k++) {
-                    mcuRed[i][j][k] = (short)Math.round((float) mcuRed[i][j][k] * (float) luminance[j][k]);
-                    mcuGreen[i][j][k] = (short)Math.round((float) mcuGreen[i][j][k] * (float) chrominance[j][k]);
-                    mcuBlue[i][j][k] = (short)Math.round((float) mcuBlue[i][j][k] * (float) chrominance[j][k]);
+                    mcuRed[i][j][k] = (short) (Math.round(mcuRed[i][j][k] / scaledLum));
+                    mcuGreen[i][j][k] = (short) (Math.round(mcuGreen[i][j][k] / scaledChrom));
+                    mcuBlue[i][j][k] = (short) (Math.round(mcuBlue[i][j][k] / scaledChrom));
                 }
             }
         }
@@ -290,15 +305,22 @@ public class Compressor {
         for (int i = 0; i < mcuBlue.length; i++) {
             for (int j = 0; j < mcuBlue[0].length; j++) {
                 for (int k = 0; k < mcuBlue[0].length; k++) {
-                    mcuRed[i][j][k] = (short) ((S==0) ? (luminance[j][k]) : (Math.round(mcuRed[i][j][k] * (S * luminance[j][k]))));
-                    mcuGreen[i][j][k] = (short) ((S==0) ? (chrominance[j][k]) : (Math.round(mcuGreen[i][j][k] * (S * chrominance[j][k]))));
-                    mcuBlue[i][j][k] = (short) ((S==0) ? (chrominance[j][k]) : (Math.round(mcuBlue[i][j][k] * (S * chrominance[j][k]))));
+                    double scaledLum = Math.ceil(S * luminance[j][k]);
+                    double scaledChrom = Math.ceil(S * chrominance[j][k]);
+                    if (scaledLum == 0)
+                        scaledChrom = 1;
+                    if (scaledLum == 0)
+                        scaledChrom = 1;
+                        
+                    mcuRed[i][j][k] = (short) (Math.round(mcuRed[i][j][k] * scaledLum));
+                    mcuGreen[i][j][k] = (short) (Math.round(mcuGreen[i][j][k] * scaledChrom));
+                    mcuBlue[i][j][k] = (short) (Math.round(mcuBlue[i][j][k] * scaledChrom));
                 }
             }
         }
     }
 
-    private void transform() {
+    private void transformDCT() {
         for (int i = 0; i < mcuBlue.length; i++) {
             mcuRed[i] = DctOperator.forward(mcuRed[i]);
             mcuGreen[i] = DctOperator.forward(mcuGreen[i]);
@@ -306,7 +328,7 @@ public class Compressor {
         }
     }
 
-    private void transformInverse() {
+    private void transformInverseDCT() {
         for (int i = 0; i < mcuBlue.length; i++) {
             mcuRed[i] = DctOperator.backward(mcuRed[i]);
             mcuGreen[i] = DctOperator.backward(mcuGreen[i]);
@@ -671,11 +693,11 @@ public class Compressor {
         return result;
     }
 
-        public short getHeight() {
+    public short getHeight() {
         return height;
     }
 
-    public void setHeight(short height) {
+    private void setHeight(short height) {
         this.height = height;
     }
 
@@ -683,12 +705,34 @@ public class Compressor {
         return width;
     }
 
-    public void setWidth(short width) {
+
+    private void setWidth(short width) {
         this.width = width;
     }
 
     public double getEncodeSizeKb() {
-        return encodeLocation.length()/1024d;
+        return encodedBytes.size() / 1024d;
+    }
+    
+    /**
+     * @param mcuSize the mcuSize to set
+     */
+    private void setMcuSize(int mcuSize) {
+        this.mcuSize = mcuSize;
+    }
+
+    /**
+     * @param mcuCount the mcuCount to set
+     */
+    private void setMcuCount(int mcuCount) {
+        this.mcuCount = mcuCount;
+    }
+
+    /**
+     * @param qFactor the qFactor to set
+     */
+    private void setqFactor(int qFactor) {
+        this.qFactor = qFactor;
     }
 
 }
