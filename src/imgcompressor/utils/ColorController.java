@@ -32,7 +32,7 @@ public class ColorController {
         }
     }
 
-        public static void transfromToRGB(short[][][] red, short[][][] green, short[][][] blue) {
+        public static void transformToRGB(short[][][] red, short[][][] green, short[][][] blue) {
         for (int k = 0; k < red.length; k++) {
             for (int i = 0; i < red[0].length; i++) {
                 for (int j = 0; j < red[0].length; j++) {
@@ -104,7 +104,7 @@ public class ColorController {
     
 
 
-        public static int[][][] getMcuRGBArray(int mcuSize, BufferedImage image,int mcuCount) {
+    public static int[][][] getMcuRGBArray(int mcuSize, BufferedImage image, int mcuCount) {
         int[][][] result = new int[mcuCount][mcuSize][mcuSize];
         int blocksRight = image.getWidth() / mcuSize;
         //int blocksDown = image.getHeight() / mcuSize;
@@ -121,4 +121,5 @@ public class ColorController {
         }
         return result;
     }
+
 }
