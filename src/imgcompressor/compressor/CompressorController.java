@@ -288,8 +288,8 @@ public class CompressorController {
                     double scaledLum = Math.ceil(S * luminance[j][k]);
                     double scaledChrom = Math.ceil(S * chrominance[j][k]);
                     if (scaledLum == 0)
-                        scaledChrom = 1;
-                    if (scaledLum == 0)
+                        scaledLum = 1;
+                    if (scaledChrom == 0)
                         scaledChrom = 1;
 
                     mcuRed[i][j][k] = (short) (Math.round(mcuRed[i][j][k] / scaledLum));
@@ -308,8 +308,8 @@ public class CompressorController {
                     double scaledLum = Math.ceil(S * luminance[j][k]);
                     double scaledChrom = Math.ceil(S * chrominance[j][k]);
                     if (scaledLum == 0)
-                        scaledChrom = 1;
-                    if (scaledLum == 0)
+                        scaledLum = 1;
+                    if (scaledChrom == 0)
                         scaledChrom = 1;
                         
                     mcuRed[i][j][k] = (short) (Math.round(mcuRed[i][j][k] * scaledLum));
