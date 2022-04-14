@@ -7,50 +7,62 @@ import java.io.IOException;
 
 import javax.imageio.ImageIO;
 import javax.swing.JFileChooser;
-import javax.swing.JFrame;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.filechooser.FileSystemView;
 
-import imgcompressor.compressor.Compressor;
+import imgcompressor.compressor.CompressorController;
+import imgcompressor.utils.StatisticsController;
 
 public class Img {
     public BufferedImage image;
-    private File imgLocation;
     public BufferedImage result;
-    private int mcuSize;
-    public Compressor compressor;
+    public CompressorController compressor;
 
-    public Img(JFrame main) throws IOException {
+    private File imgLocation;
+    private int mcuSize;
+
+    public Img(int mcuSize)  {
         JFileChooser chose = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
         FileNameExtensionFilter filter = new FileNameExtensionFilter("byte and images", "jpg", "byte", "png");
         chose.setFileFilter(filter);
-        int returnVal = chose.showOpenDialog(main);
+        int returnVal = chose.showOpenDialog(null);
 
         if (returnVal == JFileChooser.APPROVE_OPTION) {
-            this.mcuSize = 8;
+            this.mcuSize = mcuSize;
             File location = new File(chose.getSelectedFile().getAbsolutePath());
-            String s = chose.getSelectedFile().toString();
+            String fileName = chose.getSelectedFile().toString();
 
-            if (s.substring(s.lastIndexOf(".")).equals(".byte")) {
-                compressor = new Compressor();
-                compressor.decode(new File(s));
+            if (fileName.substring(fileName.lastIndexOf(".")).equals(".byte")) {
+                compressor = new CompressorController();
+                compressor.decode(new File(fileName));
                 this.image = new BufferedImage(
                         compressor.getWidth(),
                         compressor.getHeight(),
                         BufferedImage.TYPE_INT_RGB);
+
                 this.result = new BufferedImage(
                         compressor.getWidth(),
                         compressor.getHeight(),
                         BufferedImage.TYPE_INT_RGB);
+
                 compressor.decompress();
                 setRGBArray(compressor.getsRGBArray());
                 this.image = new BufferedImage(
                         result.getColorModel(),
                         result.copyData(null),
                         result.isAlphaPremultiplied(), null);
+
             } else {
-                this.image = resizeToMcuSize(ImageIO.read(location), mcuSize);
-                this.result = resizeToMcuSize(ImageIO.read(location), mcuSize);
+                try {
+                    this.image = resizeToMcuSize(ImageIO.read(location), mcuSize);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                try {
+                    this.result = resizeToMcuSize(ImageIO.read(location), mcuSize);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
             this.imgLocation = location;
         }
@@ -68,10 +80,14 @@ public class Img {
         chose.showSaveDialog(null);
         ImageIO.write(src, "PNG", new File(chose.getSelectedFile().getAbsolutePath()));
     }
-    public void writeImg() throws IOException {
+    public void writeImg()  {
         JFileChooser chose = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
         chose.showSaveDialog(null);
-        ImageIO.write(result, "PNG", new File(chose.getSelectedFile().getAbsolutePath()));
+        try {
+            ImageIO.write(result, "PNG", new File(chose.getSelectedFile().getAbsolutePath()));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private BufferedImage resizeToMcuSize(BufferedImage src, int mcuSize) {
@@ -127,8 +143,16 @@ public class Img {
     }
 
     public double getSrcFileSizeKb() {
-        double srcSizeFile = imgLocation.length()/1024d;
+        double srcSizeFile = imgLocation.length() / 1024d;
         return srcSizeFile;
+    }
+    
+    public double calculateMSE() {
+        return StatisticsController.calculateMSE(image, result);
+    }
+    
+    public double calculatePSNR() {
+        return StatisticsController.calculatePSNR(image, result);
     }
 
 }
