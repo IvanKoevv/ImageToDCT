@@ -53,7 +53,6 @@ public class Main extends JFrame {
         c.gridy = 0;
         buttonOpen.addActionListener(e -> {
             compressor = new Compressor();
-            System.gc();
 
             //Hardcoded mcu size of 8
             compressor.openFile();
@@ -67,6 +66,7 @@ public class Main extends JFrame {
             this.pack();
             this.setLocation(ScreenDim.width / 2 - this.getSize().width / 2,
                     ScreenDim.height / 2 - this.getSize().height / 2);
+            compressor.printStatsCoef();
         });
 
         this.add(buttonOpen, c);
