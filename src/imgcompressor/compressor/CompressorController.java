@@ -670,7 +670,7 @@ public class CompressorController {
 
     }
 
-    public byte[] toByteArray(short src) {
+    private byte[] toByteArray(short src) {
         byte[] result;
         if (src <= 255) {
             result = new byte[1];
@@ -683,7 +683,7 @@ public class CompressorController {
         return result;
     }
 
-    public short toShortArray(byte[] src) {
+    private short toShortArray(byte[] src) {
         short result;
         if (src.length == 1) {
             result = src[0];

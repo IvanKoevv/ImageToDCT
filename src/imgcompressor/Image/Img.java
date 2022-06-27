@@ -14,14 +14,14 @@ import imgcompressor.utils.StatisticsController;
 public class Img {
     public BufferedImage image;
     public BufferedImage result;
-    public CompressorController compressor;
-
+    
+    private CompressorController compressor;
     private File imgLocation;
     private int mcuSize;
 
     public Img(int mcuSize)  {
         JFileChooser chose = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
-        FileNameExtensionFilter filter = new FileNameExtensionFilter("byte and images", "jpg", "byte", "png");
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("byte and images", "jpg", "jpeg", "byte", "png");
         chose.setFileFilter(filter);
         int returnVal = chose.showOpenDialog(null);
 
@@ -33,11 +33,6 @@ public class Img {
             if (fileName.substring(fileName.lastIndexOf(".")).equals(".byte")) {
                 compressor = new CompressorController();
                 compressor.decode(new File(fileName));
-                this.image = new BufferedImage(
-                        compressor.getWidth(),
-                        compressor.getHeight(),
-                        BufferedImage.TYPE_INT_RGB);
-
                 this.result = new BufferedImage(
                         compressor.getWidth(),
                         compressor.getHeight(),
@@ -66,18 +61,6 @@ public class Img {
         }
     }
 
-    public Img(Img img) {
-        this.image = img.image;
-        this.mcuSize = img.mcuSize;
-        this.result = new BufferedImage(this.image.getWidth(),this.image.getHeight(),this.image.getType());
-
-    }
-
-    public void writeImg(BufferedImage src) throws IOException {
-        JFileChooser chose = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
-        chose.showSaveDialog(null);
-        ImageIO.write(src, "PNG", new File(chose.getSelectedFile().getAbsolutePath()));
-    }
     public void writeImg()  {
         JFileChooser chose = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
         chose.showSaveDialog(null);
@@ -136,12 +119,12 @@ public class Img {
     }
     
     public double getSrcSizeKb() {
-        double srcSize = (double)(image.getWidth() * image.getHeight()) * 3d / (1024d);
+        double srcSize = (double)(image.getWidth() * image.getHeight()) * 3d / (1000d);
         return srcSize;
     }
 
     public double getSrcFileSizeKb() {
-        double srcSizeFile = imgLocation.length() / 1024d;
+        double srcSizeFile = imgLocation.length() / 1000d;
         return srcSizeFile;
     }
     

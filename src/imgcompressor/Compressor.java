@@ -28,13 +28,6 @@ public class Compressor {
     }
 
     /**
-     * @param image the image to set
-     */
-    public void setImage(Img image) {
-        this.image = image;
-    }
-
-    /**
      * Used for opening and loading an image or .byte file
      */
     public void openFile() {

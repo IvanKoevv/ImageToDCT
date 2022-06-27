@@ -1,7 +1,6 @@
 package imgcompressor.utils;
 
 import java.awt.Color;
-import java.awt.image.BufferedImage;
 public class ColorController {
     public static short[][] getRedRGBArray(int[][] src) {
         short[][] result = new short[src.length][src.length];
@@ -101,25 +100,4 @@ public class ColorController {
         }
         return result;
     }
-    
-
-
-    public static int[][][] getMcuRGBArray(int mcuSize, BufferedImage image, int mcuCount) {
-        int[][][] result = new int[mcuCount][mcuSize][mcuSize];
-        int blocksRight = image.getWidth() / mcuSize;
-        //int blocksDown = image.getHeight() / mcuSize;
-        for (int i = 0, offx = 0, offy = 0; i < mcuCount; i++, offx++) {
-            if (offx == blocksRight) {
-                offy++;
-                offx = 0;
-            }
-            for (int y = 0; y < mcuSize; y++) {
-                for (int x = 0; x < mcuSize; x++) {
-                    result[i][y][x] = image.getRGB(x + (mcuSize * offx), y + (mcuSize * offy));
-                }
-            }
-        }
-        return result;
-    }
-
 }
